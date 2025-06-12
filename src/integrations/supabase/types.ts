@@ -9,7 +9,227 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      answers: {
+        Row: {
+          audio_url: string | null
+          created_at: string
+          feedback: string | null
+          id: string
+          is_correct: boolean | null
+          question_id: string
+          response_time_seconds: number | null
+          score: number | null
+          user_answer: string | null
+        }
+        Insert: {
+          audio_url?: string | null
+          created_at?: string
+          feedback?: string | null
+          id?: string
+          is_correct?: boolean | null
+          question_id: string
+          response_time_seconds?: number | null
+          score?: number | null
+          user_answer?: string | null
+        }
+        Update: {
+          audio_url?: string | null
+          created_at?: string
+          feedback?: string | null
+          id?: string
+          is_correct?: boolean | null
+          question_id?: string
+          response_time_seconds?: number | null
+          score?: number | null
+          user_answer?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exam_feedback: {
+        Row: {
+          areas_for_improvement: string[] | null
+          created_at: string
+          exam_id: string
+          id: string
+          overall_feedback: string | null
+          strengths: string[] | null
+          study_recommendations: string[] | null
+        }
+        Insert: {
+          areas_for_improvement?: string[] | null
+          created_at?: string
+          exam_id: string
+          id?: string
+          overall_feedback?: string | null
+          strengths?: string[] | null
+          study_recommendations?: string[] | null
+        }
+        Update: {
+          areas_for_improvement?: string[] | null
+          created_at?: string
+          exam_id?: string
+          id?: string
+          overall_feedback?: string | null
+          strengths?: string[] | null
+          study_recommendations?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_feedback_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exams: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          duration_minutes: number | null
+          id: string
+          max_score: number | null
+          notes_id: string
+          percentage_score: number | null
+          question_count: number
+          started_at: string | null
+          status: Database["public"]["Enums"]["exam_status"]
+          title: string
+          total_score: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          duration_minutes?: number | null
+          id?: string
+          max_score?: number | null
+          notes_id: string
+          percentage_score?: number | null
+          question_count?: number
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["exam_status"]
+          title: string
+          total_score?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          duration_minutes?: number | null
+          id?: string
+          max_score?: number | null
+          notes_id?: string
+          percentage_score?: number | null
+          question_count?: number
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["exam_status"]
+          title?: string
+          total_score?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exams_notes_id_fkey"
+            columns: ["notes_id"]
+            isOneToOne: false
+            referencedRelation: "notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notes: {
+        Row: {
+          content: string | null
+          created_at: string
+          file_urls: string[] | null
+          id: string
+          subject: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          file_urls?: string[] | null
+          id?: string
+          subject?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          file_urls?: string[] | null
+          id?: string
+          subject?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      questions: {
+        Row: {
+          correct_answer: string | null
+          created_at: string
+          difficulty: Database["public"]["Enums"]["difficulty_level"]
+          exam_id: string
+          id: string
+          multiple_choice_options: Json | null
+          order_index: number
+          points: number
+          question_text: string
+          question_type: Database["public"]["Enums"]["question_type"]
+        }
+        Insert: {
+          correct_answer?: string | null
+          created_at?: string
+          difficulty?: Database["public"]["Enums"]["difficulty_level"]
+          exam_id: string
+          id?: string
+          multiple_choice_options?: Json | null
+          order_index: number
+          points?: number
+          question_text: string
+          question_type?: Database["public"]["Enums"]["question_type"]
+        }
+        Update: {
+          correct_answer?: string | null
+          created_at?: string
+          difficulty?: Database["public"]["Enums"]["difficulty_level"]
+          exam_id?: string
+          id?: string
+          multiple_choice_options?: Json | null
+          order_index?: number
+          points?: number
+          question_text?: string
+          question_type?: Database["public"]["Enums"]["question_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questions_exam_id_fkey"
+            columns: ["exam_id"]
+            isOneToOne: false
+            referencedRelation: "exams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -18,7 +238,9 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      difficulty_level: "easy" | "medium" | "hard"
+      exam_status: "setup" | "in_progress" | "completed"
+      question_type: "multiple_choice" | "open_ended" | "true_false"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -133,6 +355,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      difficulty_level: ["easy", "medium", "hard"],
+      exam_status: ["setup", "in_progress", "completed"],
+      question_type: ["multiple_choice", "open_ended", "true_false"],
+    },
   },
 } as const
