@@ -7,6 +7,7 @@ import { Mic, MicOff, ArrowRight, Square } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ENDPOINTS } from "@/config/endpoints";
+import { Badge } from "@/components/ui/badge";
 
 interface Question {
   id: string;
@@ -20,6 +21,32 @@ interface Question {
     correct_answer: string;
   };
 }
+
+const getQuestionTypeColor = (type: Question["question_type"]) => {
+  switch (type) {
+    case "multiple_choice":
+      return "bg-blue-100 text-blue-800";
+    case "true_false":
+      return "bg-purple-100 text-purple-800";
+    case "open_ended":
+      return "bg-green-100 text-green-800";
+    default:
+      return "bg-gray-100 text-gray-800";
+  }
+};
+
+const getQuestionTypeLabel = (type: Question["question_type"]) => {
+  switch (type) {
+    case "multiple_choice":
+      return "Multiple Choice";
+    case "true_false":
+      return "True/False";
+    case "open_ended":
+      return "Open Ended";
+    default:
+      return type;
+  }
+};
 
 const OralExam = () => {
   const navigate = useNavigate();
@@ -38,6 +65,10 @@ const OralExam = () => {
   const currentQuestionData = questions[currentQuestion - 1] as Question;
 
   useEffect(() => {
+    console.log('Current Question Data:', currentQuestionData);
+    if (currentQuestionData?.question_type === 'multiple_choice') {
+      console.log('Multiple Choice Options:', currentQuestionData.multiple_choice_options);
+    }
     let interval: NodeJS.Timeout;
     if (isRecording) {
       interval = setInterval(() => {
@@ -47,7 +78,7 @@ const OralExam = () => {
       setRecordingTime(0);
     }
     return () => clearInterval(interval);
-  }, [isRecording]);
+  }, [isRecording, currentQuestionData]);
 
   const startRecording = async () => {
     try {
@@ -204,14 +235,43 @@ const OralExam = () => {
         {/* Question Card */}
         <Card className="shadow-lg border-0 bg-white/90 backdrop-blur-sm">
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg text-gray-800">
-              Question {currentQuestion}
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg text-gray-800">
+                Question {currentQuestion}
+              </CardTitle>
+              <Badge className={getQuestionTypeColor(currentQuestionData?.question_type)}>
+                {getQuestionTypeLabel(currentQuestionData?.question_type)}
+              </Badge>
+            </div>
           </CardHeader>
           <CardContent>
-            <p className="text-gray-700 text-base leading-relaxed">
+            <p className="text-gray-700 text-base leading-relaxed mb-4">
               {currentQuestionData?.question_text}
             </p>
+            
+            {currentQuestionData?.question_type === "multiple_choice" && (
+              <div className="mt-4 space-y-2">
+                {(
+                  Array.isArray(currentQuestionData.multiple_choice_options)
+                    ? currentQuestionData.multiple_choice_options
+                    : currentQuestionData.multiple_choice_options?.options || []
+                ).map((option, index) => (
+                  <div
+                    key={index}
+                    className="p-3 bg-gray-50 rounded-lg text-gray-700"
+                  >
+                    {String.fromCharCode(65 + index)}. {option}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {currentQuestionData?.question_type === "true_false" && (
+              <div className="mt-4 space-y-2">
+                <div className="p-3 bg-gray-50 rounded-lg text-gray-700">True</div>
+                <div className="p-3 bg-gray-50 rounded-lg text-gray-700">False</div>
+              </div>
+            )}
           </CardContent>
         </Card>
 

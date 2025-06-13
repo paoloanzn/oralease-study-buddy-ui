@@ -1,58 +1,58 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Search, Upload, FileText, Calendar, Trash, Eye } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const MyNotes = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Mock notes data
-  const notes = [
-    {
-      id: 1,
-      title: "Biology Chapter 5 - Photosynthesis",
-      uploadDate: "2024-06-10",
-      fileCount: 3,
-      lastUsed: "2 days ago",
-      type: "PDF",
+  // Fetch notes
+  const { data: notes = [], isLoading } = useQuery({
+    queryKey: ['notes'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('notes')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data;
     },
-    {
-      id: 2,
-      title: "History - World War II",
-      uploadDate: "2024-06-05",
-      fileCount: 1,
-      lastUsed: "1 week ago",
-      type: "PDF",
+  });
+
+  // Delete note mutation
+  const deleteNote = useMutation({
+    mutationFn: async (noteId: string) => {
+      const { error } = await supabase
+        .from('notes')
+        .delete()
+        .eq('id', noteId);
+
+      if (error) throw error;
     },
-    {
-      id: 3,
-      title: "Chemistry - Organic Compounds",
-      uploadDate: "2024-05-28",
-      fileCount: 2,
-      lastUsed: "2 weeks ago",
-      type: "Images",
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notes'] });
+      toast({
+        title: "Note deleted",
+        description: "Your note has been successfully deleted.",
+      });
     },
-    {
-      id: 4,
-      title: "Physics - Newton's Laws",
-      uploadDate: "2024-05-20",
-      fileCount: 1,
-      lastUsed: "3 weeks ago",
-      type: "Text",
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete note. Please try again.",
+        variant: "destructive",
+      });
     },
-    {
-      id: 5,
-      title: "Mathematics - Calculus Basics",
-      uploadDate: "2024-05-15",
-      fileCount: 4,
-      lastUsed: "1 month ago",
-      type: "PDF",
-    },
-  ];
+  });
 
   const filteredNotes = notes.filter(note =>
     note.title.toLowerCase().includes(searchTerm.toLowerCase())
@@ -74,6 +74,35 @@ const MyNotes = () => {
         return "bg-gray-100 text-gray-700";
     }
   };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (diffInDays === 0) return "Today";
+    if (diffInDays === 1) return "1 day ago";
+    if (diffInDays < 7) return `${diffInDays} days ago`;
+    if (diffInDays < 14) return "1 week ago";
+    return `${Math.floor(diffInDays / 7)} weeks ago`;
+  };
+
+  const handleDeleteNote = async (noteId: string) => {
+    if (window.confirm("Are you sure you want to delete this note?")) {
+      deleteNote.mutate(noteId);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 p-4 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading notes...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 p-4">
@@ -135,13 +164,17 @@ const MyNotes = () => {
                       </CardTitle>
                       <div className="flex items-center gap-2 text-xs text-gray-500">
                         <Calendar className="h-3 w-3" />
-                        <span>Uploaded {note.uploadDate}</span>
-                        <span>•</span>
-                        <span>Used {note.lastUsed}</span>
+                        <span>Uploaded {formatDate(note.created_at)}</span>
+                        {note.subject && (
+                          <>
+                            <span>•</span>
+                            <span>{note.subject}</span>
+                          </>
+                        )}
                       </div>
                     </div>
-                    <div className={`px-2 py-1 rounded-md text-xs font-medium ${getTypeColor(note.type)}`}>
-                      {note.type}
+                    <div className={`px-2 py-1 rounded-md text-xs font-medium ${getTypeColor(note.file_urls?.[0]?.split('.').pop()?.toUpperCase() || 'Text')}`}>
+                      {note.file_urls?.[0]?.split('.').pop()?.toUpperCase() || 'Text'}
                     </div>
                   </div>
                 </CardHeader>
@@ -149,13 +182,14 @@ const MyNotes = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center text-xs text-gray-500">
                       <FileText className="h-3 w-3 mr-1" />
-                      <span>{note.fileCount} file{note.fileCount !== 1 ? 's' : ''}</span>
+                      <span>{note.file_urls?.length || 1} file{note.file_urls?.length !== 1 ? 's' : ''}</span>
                     </div>
                     
                     <div className="flex items-center gap-2">
                       <Button
                         variant="ghost"
                         size="sm"
+                        onClick={() => navigate("/exam-setup", { state: { notes_id: note.id } })}
                         className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                       >
                         <Eye className="h-4 w-4" />
@@ -163,6 +197,7 @@ const MyNotes = () => {
                       <Button
                         variant="ghost"
                         size="sm"
+                        onClick={() => handleDeleteNote(note.id)}
                         className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                       >
                         <Trash className="h-4 w-4" />

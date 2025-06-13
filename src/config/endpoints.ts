@@ -1,5 +1,5 @@
 
-const TESTING_ENDPOINTS = true
+const TESTING_ENDPOINTS = false
 
 const BASE_URL = `https:/paoloanzn.app.n8n.cloud/webhook${TESTING_ENDPOINTS ? "-test" : ""}`;
 
