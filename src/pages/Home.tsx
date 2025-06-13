@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
@@ -7,10 +6,12 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 import { CreateNoteModal } from "@/components/CreateNoteModal";
+import { useNotes } from "@/hooks/useNotes";
 
 const Home = () => {
   const navigate = useNavigate();
   const [showCreateNote, setShowCreateNote] = useState(false);
+  const { notes, isLoading: isLoadingNotes } = useNotes();
 
   // Fetch recent exams
   const { data: recentExams = [] } = useQuery({
@@ -79,7 +80,7 @@ const Home = () => {
           </Button>
           
           <Button
-            onClick={() => navigate("/my-notes")}
+            onClick={() => navigate("/exam-setup")}
             variant="outline"
             className="w-full h-14 text-lg border-2 border-green-500 text-green-600 hover:bg-green-50 rounded-xl"
           >
@@ -109,7 +110,7 @@ const Home = () => {
                   <div
                     key={exam.id}
                     className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-100 hover:shadow-md transition-shadow cursor-pointer"
-                    onClick={() => navigate("/results")}
+                    onClick={() => navigate("/results", { state: { exam_id: exam.id } })}
                   >
                     <div className="flex-1">
                       <h3 className="font-medium text-gray-800 text-sm leading-tight">

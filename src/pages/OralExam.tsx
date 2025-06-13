@@ -1,36 +1,41 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Mic, MicOff, ArrowRight, Square } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { ENDPOINTS } from "@/config/endpoints";
+
+interface Question {
+  id: string;
+  question_text: string;
+  question_type: "multiple_choice" | "open_ended" | "true_false";
+  difficulty: "easy" | "medium" | "hard";
+  points: number;
+  order_index: number;
+  multiple_choice_options?: {
+    options: string[];
+    correct_answer: string;
+  };
+}
 
 const OralExam = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { questionCount = 10 } = location.state || {};
+  const { toast } = useToast();
+  const { exam_id, questions, questionCount } = location.state || {};
   
   const [currentQuestion, setCurrentQuestion] = useState(1);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [answers, setAnswers] = useState<string[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
-  // Mock questions
-  const sampleQuestions = [
-    "Explain the process of photosynthesis and its importance in the ecosystem.",
-    "What are the main stages of cellular respiration?",
-    "Describe the structure and function of chloroplasts.",
-    "How do plants adapt to different environmental conditions?",
-    "What is the role of enzymes in metabolic processes?",
-    "Explain the difference between mitosis and meiosis.",
-    "What are the main components of the cell membrane?",
-    "How does DNA replication occur?",
-    "Describe the process of protein synthesis.",
-    "What is the significance of the Calvin cycle?",
-  ];
-
-  const currentQuestionText = sampleQuestions[currentQuestion - 1] || "Sample question for demonstration.";
+  const currentQuestionData = questions[currentQuestion - 1] as Question;
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -44,27 +49,133 @@ const OralExam = () => {
     return () => clearInterval(interval);
   }, [isRecording]);
 
-  const toggleRecording = () => {
-    if (isRecording) {
-      // Stop recording and save answer
-      setAnswers(prev => [...prev, `Answer ${currentQuestion}`]);
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'audio/webm;codecs=opus'
+      });
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        console.log('Data available:', event.data.size);
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      // Request data every 1 second
+      mediaRecorder.start(1000);
+      setIsRecording(true);
+    } catch (error) {
+      console.error('Recording error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to access microphone. Please check your permissions.",
+        variant: "destructive",
+      });
     }
-    setIsRecording(!isRecording);
   };
 
-  const nextQuestion = () => {
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      
+      // Process the recording
+      const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+      console.log('Audio chunks collected:', audioChunksRef.current.length);
+      console.log('Audio blob size:', audioBlob.size);
+      processRecording(audioBlob);
+    }
+  };
+
+  const processRecording = async (audioBlob: Blob) => {
+    setIsProcessing(true);
+    try {
+      // Convert blob to base64
+      const reader = new FileReader();
+      const base64Audio = await new Promise<string>((resolve) => {
+        reader.onload = () => {
+          const result = reader.result as string;
+          console.log('Base64 audio length:', result.length);
+          resolve(result);
+        };
+        reader.readAsDataURL(audioBlob);
+      });
+
+      // Send to transcription endpoint
+      const response = await fetch(ENDPOINTS.TRANSCRIBE, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          audio_data: base64Audio,
+          exam_id,
+          question_id: currentQuestionData.id,
+          user_id: (await supabase.auth.getUser()).data.user?.id
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to transcribe audio');
+      }
+
+      const result = await response.json();
+      setAnswers(prev => [...prev, result.transcription]);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to process your answer. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const nextQuestion = async () => {
     if (currentQuestion < questionCount) {
       setCurrentQuestion(prev => prev + 1);
       setIsRecording(false);
       setRecordingTime(0);
     } else {
       // Complete exam
-      navigate("/results", { 
-        state: { 
-          totalQuestions: questionCount,
-          answers: answers 
-        } 
-      });
+      try {
+        setIsProcessing(true);
+        const response = await fetch(ENDPOINTS.EVALUATE_EXAM, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            exam_id,
+            user_id: (await supabase.auth.getUser()).data.user?.id
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to evaluate exam');
+        }
+
+        const result = await response.json();
+        navigate("/results", { 
+          state: { 
+            exam_id,
+            results: result
+          } 
+        });
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to complete exam. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsProcessing(false);
+      }
     }
   };
 
@@ -99,7 +210,7 @@ const OralExam = () => {
           </CardHeader>
           <CardContent>
             <p className="text-gray-700 text-base leading-relaxed">
-              {currentQuestionText}
+              {currentQuestionData?.question_text}
             </p>
           </CardContent>
         </Card>
@@ -122,7 +233,8 @@ const OralExam = () => {
 
               {/* Microphone Button */}
               <Button
-                onClick={toggleRecording}
+                onClick={isRecording ? stopRecording : startRecording}
+                disabled={isProcessing}
                 className={`w-20 h-20 rounded-full shadow-lg transition-all duration-300 ${
                   isRecording 
                     ? "bg-red-500 hover:bg-red-600 scale-110" 
@@ -155,7 +267,7 @@ const OralExam = () => {
           
           <Button
             onClick={nextQuestion}
-            disabled={isRecording || answers.length < currentQuestion}
+            disabled={isRecording || isProcessing || answers.length < currentQuestion}
             className="h-12 px-6 bg-green-600 hover:bg-green-700 text-white rounded-xl shadow-lg disabled:opacity-50"
           >
             {currentQuestion === questionCount ? "Finish Exam" : "Next Question"}

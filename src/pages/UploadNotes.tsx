@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import { Upload, FileText, File, Plus, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { ENDPOINTS } from "@/config/endpoints";
 
 const UploadNotes = () => {
   const navigate = useNavigate();
@@ -45,15 +46,62 @@ const UploadNotes = () => {
 
     setIsProcessing(true);
     
-    // Simulate processing time
-    setTimeout(() => {
-      setIsProcessing(false);
+    try {
+      // Convert files to base64
+      const filePromises = files.map(async (file) => {
+        const reader = new FileReader();
+        return new Promise((resolve) => {
+          reader.onload = () => {
+            resolve({
+              content: reader.result as string,
+              filename: file.name,
+              mime_type: file.type
+            });
+          };
+          reader.readAsDataURL(file);
+        });
+      });
+
+      const processedFiles = await Promise.all(filePromises);
+
+      // Call the media processing endpoint
+      const response = await fetch(ENDPOINTS.PROCESS_MEDIA, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          files: processedFiles,
+          title: title.trim(),
+          user_id: (await supabase.auth.getUser()).data.user?.id
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to process media files');
+      }
+
+      const result = await response.json();
+
+      if (result.status === 'error') {
+        throw new Error(result.error || 'Failed to process media files');
+      }
+
       toast({
         title: "Notes Uploaded Successfully!",
         description: "Your notes have been processed and are ready for use.",
       });
+      
       navigate("/exam-setup");
-    }, 3000);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to process your notes. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   if (isProcessing) {

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,20 +5,31 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Play } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { ENDPOINTS } from "@/config/endpoints";
+import { useQuery } from "@tanstack/react-query";
 
 const ExamSetup = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [selectedNotes, setSelectedNotes] = useState("");
   const [questionCount, setQuestionCount] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Mock notes data
-  const availableNotes = [
-    "Biology Chapter 5 - Photosynthesis",
-    "History - World War II",
-    "Chemistry - Organic Compounds",
-    "Physics - Newton's Laws",
-    "Mathematics - Calculus Basics",
-  ];
+  // Fetch available notes
+  const { data: availableNotes = [] } = useQuery({
+    queryKey: ['notes'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('notes')
+        .select('id, title')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const questionOptions = [
     { value: "5", label: "5 Questions (Quick)" },
@@ -28,14 +38,44 @@ const ExamSetup = () => {
     { value: "20", label: "20 Questions (Full Test)" },
   ];
 
-  const handleStartExam = () => {
-    if (selectedNotes && questionCount) {
+  const handleStartExam = async () => {
+    if (!selectedNotes || !questionCount) return;
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(ENDPOINTS.CREATE_EXAM, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          notes_id: selectedNotes,
+          question_count: parseInt(questionCount),
+          user_id: (await supabase.auth.getUser()).data.user?.id
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create exam');
+      }
+
+      const result = await response.json();
+      
       navigate("/oral-exam", { 
         state: { 
-          notes: selectedNotes, 
-          questionCount: parseInt(questionCount) 
+          exam_id: result.exam_id,
+          questions: result.questions,
+          questionCount: parseInt(questionCount)
         } 
       });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create exam. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -71,8 +111,8 @@ const ExamSetup = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {availableNotes.map((note) => (
-                    <SelectItem key={note} value={note}>
-                      {note}
+                    <SelectItem key={note.id} value={note.id}>
+                      {note.title}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -101,7 +141,7 @@ const ExamSetup = () => {
               <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <h3 className="font-medium text-blue-800 mb-2">Exam Preview</h3>
                 <div className="text-sm text-blue-700 space-y-1">
-                  <p><span className="font-medium">Notes:</span> {selectedNotes}</p>
+                  <p><span className="font-medium">Notes:</span> {availableNotes.find(n => n.id === selectedNotes)?.title}</p>
                   <p><span className="font-medium">Questions:</span> {questionCount}</p>
                   <p><span className="font-medium">Estimated Time:</span> {Math.ceil(parseInt(questionCount) * 1.5)} minutes</p>
                 </div>
@@ -126,11 +166,11 @@ const ExamSetup = () => {
         {/* Start Button */}
         <Button
           onClick={handleStartExam}
-          disabled={!selectedNotes || !questionCount}
+          disabled={!selectedNotes || !questionCount || isLoading}
           className="w-full h-14 text-lg bg-green-600 hover:bg-green-700 text-white rounded-xl shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Play className="mr-3 h-5 w-5" />
-          Start Oral Exam
+          {isLoading ? "Creating Exam..." : "Start Oral Exam"}
         </Button>
       </div>
     </div>
