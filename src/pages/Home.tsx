@@ -1,7 +1,8 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
-import { Upload, Mic, FileText, Calendar, Plus } from "lucide-react";
+import { Upload, Mic, FileText, Calendar, Plus, BarChart3 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
@@ -65,8 +66,8 @@ const Home = () => {
       <div className="max-w-md mx-auto space-y-6">
         {/* Header */}
         <div className="text-center pt-8 pb-4">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Welcome Back!</h1>
-          <p className="text-gray-600">Ready to practice your oral exam skills?</p>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">Welcome to MedNexusOS!</h1>
+          <p className="text-gray-600">Your comprehensive medical exam preparation platform</p>
         </div>
 
         {/* Quick Actions */}
@@ -86,6 +87,15 @@ const Home = () => {
           >
             <Upload className="mr-3 h-5 w-5" />
             Start Oral Exam
+          </Button>
+
+          <Button
+            onClick={() => navigate("/performance-dashboard")}
+            variant="outline"
+            className="w-full h-14 text-lg border-2 border-purple-500 text-purple-600 hover:bg-purple-50 rounded-xl"
+          >
+            <BarChart3 className="mr-3 h-5 w-5" />
+            Performance Dashboard
           </Button>
         </div>
 

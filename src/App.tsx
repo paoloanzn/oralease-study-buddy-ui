@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,6 +14,7 @@ import ExamSetup from "./pages/ExamSetup";
 import OralExam from "./pages/OralExam";
 import ExamResults from "./pages/ExamResults";
 import UploadNotes from "./pages/UploadNotes";
+import PerformanceDashboard from "./pages/PerformanceDashboard";
 
 const queryClient = new QueryClient();
 
@@ -70,6 +72,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <UploadNotes />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/performance-dashboard" 
+              element={
+                <ProtectedRoute>
+                  <PerformanceDashboard />
                 </ProtectedRoute>
               } 
             />

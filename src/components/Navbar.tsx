@@ -27,7 +27,7 @@ export const Navbar: React.FC = () => {
           className="text-xl font-bold text-blue-600 cursor-pointer"
           onClick={() => navigate('/')}
         >
-          OralEase
+          MedNexusOS
         </h1>
         <div className="flex items-center space-x-2">
           <div className="flex items-center text-sm text-gray-600">
