@@ -12,7 +12,8 @@ export const STRIPE_CONFIG = {
     CORE: {
       name: "Core Plan",
       price: 999, // $9.99 in cents
-      features: ["Access to all current features", "Oral exam practice", "Performance dashboard"]
+      features: ["Access to all current features", "Oral exam practice", "Performance dashboard"],
+      comingSoon: false
     },
     PRO: {
       name: "Pro Plan", 
