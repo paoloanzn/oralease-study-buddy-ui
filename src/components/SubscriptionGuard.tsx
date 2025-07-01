@@ -1,31 +1,20 @@
 
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
 import { useSubscription } from '@/contexts/SubscriptionContext';
-import { SubscriptionModal } from './SubscriptionModal';
-import { Button } from '@/components/ui/button';
-import { Lock } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 interface SubscriptionGuardProps {
   children: React.ReactNode;
   requiredTier?: 'CORE' | 'PRO';
-  fallback?: React.ReactNode;
 }
 
 export const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({ 
   children, 
-  requiredTier = 'CORE',
-  fallback 
+  requiredTier = 'CORE'
 }) => {
   const { isSubscribed, subscriptionTier, loading } = useSubscription();
-  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const hasAccess = () => {
     if (!isSubscribed) return false;
@@ -41,33 +30,23 @@ export const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
     return false;
   };
 
-  if (!hasAccess()) {
-    if (fallback) {
-      return <>{fallback}</>;
+  useEffect(() => {
+    if (!loading && !hasAccess() && location.pathname !== '/subscription') {
+      navigate('/subscription');
     }
+  }, [loading, isSubscribed, subscriptionTier, location.pathname, navigate]);
 
+  if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center p-8 text-center">
-        <Lock className="h-12 w-12 text-gray-400 mb-4" />
-        <h3 className="text-lg font-semibold text-gray-800 mb-2">
-          Subscription Required
-        </h3>
-        <p className="text-gray-600 mb-4">
-          This feature requires a {requiredTier} subscription to access.
-        </p>
-        <Button 
-          onClick={() => setShowSubscriptionModal(true)}
-          className="bg-blue-600 hover:bg-blue-700"
-        >
-          View Plans
-        </Button>
-        
-        <SubscriptionModal 
-          isOpen={showSubscriptionModal}
-          onClose={() => setShowSubscriptionModal(false)}
-        />
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     );
+  }
+
+  if (!hasAccess()) {
+    // Return null since we're redirecting
+    return null;
   }
 
   return <>{children}</>;

@@ -16,6 +16,7 @@ import OralExam from "./pages/OralExam";
 import ExamResults from "./pages/ExamResults";
 import UploadNotes from "./pages/UploadNotes";
 import PerformanceDashboard from "./pages/PerformanceDashboard";
+import Subscription from "./pages/Subscription";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +30,14 @@ const App = () => (
           <BrowserRouter>
             <Navbar />
             <Routes>
+              <Route 
+                path="/subscription" 
+                element={
+                  <ProtectedRoute>
+                    <Subscription />
+                  </ProtectedRoute>
+                } 
+              />
               <Route 
                 path="/" 
                 element={
