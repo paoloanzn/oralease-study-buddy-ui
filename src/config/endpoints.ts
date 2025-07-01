@@ -1,7 +1,7 @@
 
 const TESTING_ENDPOINTS = false
 
-const BASE_URL = `https:/paoloanzn.app.n8n.cloud/webhook${TESTING_ENDPOINTS ? "-test" : ""}`;
+const BASE_URL = `https://paoloanzn.app.n8n.cloud/webhook${TESTING_ENDPOINTS ? "-test" : ""}`;
 
 export const ENDPOINTS = {
   CREATE_EXAM: BASE_URL + "/create-exam",
