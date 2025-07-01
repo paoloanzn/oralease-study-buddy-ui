@@ -57,7 +57,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           <DialogTitle>{isSignUp ? 'Create Account' : 'Sign In'}</DialogTitle>
           <DialogDescription>
             {isSignUp 
-              ? 'Create your account to start using OralEase' 
+              ? 'Create your account to start using MedNexusOS' 
               : 'Sign in to your account to continue'
             }
           </DialogDescription>

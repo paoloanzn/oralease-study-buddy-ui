@@ -27,7 +27,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-green-50">
         <div className="text-center max-w-md mx-auto p-6">
-          <h1 className="text-3xl font-bold text-gray-800 mb-4">Welcome to OralEase</h1>
+          <h1 className="text-3xl font-bold text-gray-800 mb-4">Welcome to MedNexusOS</h1>
           <p className="text-gray-600 mb-6">
             Your AI-powered oral exam study companion. Sign in to start practicing and improving your oral exam skills.
           </p>
